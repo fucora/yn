@@ -20,7 +20,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 import Layout from '@/components/Layout'
 import TitleBar from '@/components/TitleBar'
 import FileTabs from '@/components/FileTabs'
@@ -28,9 +28,10 @@ import StatusBar from '@/components/StatusBar'
 import Tree from '@/components/Tree'
 import Editor from '@/components/Editor'
 import Preview from '@/components/Preview'
-import RunPlugin from '../plugins/RunPlugin'
 import XFilter from '@/components/Filter'
 import Xterm from '@/components/Xterm'
+import RunPlugin from '@/plugins/RunPlugin'
+import File from '@/lib/file'
 
 export default {
   name: 'x-main',
@@ -44,13 +45,13 @@ export default {
   },
   methods: {
     init () {
-      if (!this.currentFile) {
-        this.$store.dispatch('app/showHelp', 'README.md')
+      if (!this.currentFile || this.currentFile.id === File.toUri(null)) {
+        // this.$store.dispatch('app/showHelp', 'README.md')
       }
     }
   },
   computed: {
-    ...mapState('app', ['currentFile'])
+    ...mapGetters('app', ['currentFile'])
   }
 }
 </script>

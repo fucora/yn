@@ -16,7 +16,7 @@
 
 <script>
 import _ from 'lodash'
-import { mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 import dayjs from 'dayjs'
 import File from '@/lib/file'
 import Storage from '@/lib/Storage'
@@ -53,8 +53,8 @@ export default {
   },
   methods: {
     setCurrentValue ({ uri, value }) {
-      if (this.toUri(this.currentFile) === uri) {
-        this.$store.commit('app/setCurrentContent', value)
+      if (this.currentFile.id === uri) {
+        this.$store.commit('app/mergeFile', { id: this.currentFile.id, data: { content: value } })
       }
     },
     saveFileOpenPosition (top) {
@@ -78,7 +78,7 @@ export default {
         await File.write(file, content, 'new')
 
         this.$bus.emit('file-created', file)
-        this.$store.commit('app/setCurrentFile', file)
+        this.$store.dispatch('app/switchCurrentFile', file)
       } catch (error) {
         this.$toast.show('warning', error.message)
         console.error(error)
@@ -137,7 +137,7 @@ export default {
     async saveFile (f = null) {
       const file = f || this.currentFile
 
-      if (!(file && file.repo && file.path)) {
+      if (!(file && file.repo && file.path && !File.isProtectFile(file))) {
         return
       }
 
@@ -149,12 +149,10 @@ export default {
         return
       }
 
-      if (file.repo === '__help__') {
-        return
-      }
-
       try {
         let content = this.currentContent
+
+        const mergeData = {}
 
         // 加密文件内容
         if (File.isEncryptedFile(file)) {
@@ -169,14 +167,15 @@ export default {
 
           content = encrypted.content
           // 储存这次解密文件密码的 hash，用于下次判断是否输入了相同密码
-          this.$store.commit('app/setPasswordHash', file, encrypted.passwordHash)
+          mergeData.passwordHash = encrypted.passwordHash
         }
 
         const { hash } = await File.write(file, content, this.previousHash)
 
-        this.$store.commit('app/setPreviousHash', hash)
-        this.$store.commit('app/setPreviousContent', this.currentContent)
-        this.$store.commit('app/setSavedAt', new Date())
+        mergeData.prevContent = this.currentContent
+        mergeData.prevHash = hash
+        mergeData.savedAt = new Date()
+        this.$store.commit('app/mergeFile', { id: file.id, data: mergeData })
       } catch (error) {
         this.$toast.show('warning', error.message)
         console.error(error)
@@ -196,26 +195,31 @@ export default {
     async changeFile (current, previous) {
       this.clearTimer()
 
-      if (previous && previous.repo && previous.path) {
+      if (previous && !File.isProtectFile(previous)) {
         await this.saveFile(previous)
       }
 
-      if (!current) {
-        this.$store.commit('app/setPreviousContent', '\n')
-        this.$refs.editor.setModel(this.toUri(current), '\n')
-        this.$store.commit('app/setCurrentFile', null)
-        return
-      }
+      if (File.isProtectFile(current)) { // 预先填充内容的文件
+        const content = current.content || ''
+        this.$store.commit('app/mergeFile', {
+          id: current.id,
+          data: {
+            content: content,
+            prevContent: content,
+            savedAt: null,
+          }
+        })
 
-      if (current.content) { // 系统文件
-        this.$store.commit('app/setPreviousContent', current.content)
-        this.$store.commit('app/setSavedAt', null)
         this.$refs.editor.setModel(this.toUri(current), current.content)
         return
       }
 
       try {
+        this.$refs.editor.setModel(this.toUri(current), null)
+
         let { content, hash } = await File.read(current)
+
+        const mergeData = {}
 
         // 解密文件内容
         if (File.isEncryptedFile(current)) {
@@ -223,15 +227,17 @@ export default {
           const decrypted = File.decrypt(content, password)
           content = decrypted.content
           // 储存这次解密文件密码的 hash，用于下次判断是否输入了相同密码
-          this.$store.commit('app/setPasswordHash', { file: current, passwordHash: decrypted.passwordHash })
+          mergeData.passwordHash = decrypted.passwordHash
         }
 
-        this.$store.commit('app/setPreviousContent', content)
-        this.$store.commit('app/setPreviousHash', hash)
-        this.$store.commit('app/setSavedAt', null)
+        mergeData.prevContent = content
+        mergeData.prevHash = hash
+        mergeData.content = content
+        this.$store.commit('app/mergeFile', { id: current.id, data: mergeData })
+
         this.$refs.editor.setModel(this.toUri(current), content)
       } catch (error) {
-        this.$store.commit('app/setCurrentFile', null)
+        this.$store.dispatch('app/switchCurrentFile', null)
         this.$toast.show('warning', error.message)
         console.error(error)
       }
@@ -242,10 +248,26 @@ export default {
     }
   },
   computed: {
-    ...mapState('app', ['currentFile', 'currentContent', 'previousContent', 'previousHash', 'passwordHash'])
+    ...mapGetters('app', ['currentFile', 'openedFile']),
+    ...mapState('app', ['currentFileId']),
+    currentContent () {
+      return this.currentFile.content
+    },
+    previousContent () {
+      return this.currentFile.prevContent
+    },
+    previousHash () {
+      return this.currentFile.prevHash
+    },
+    passwordHash () {
+      return this.currentFile.passwordHash
+    }
   },
   watch: {
-    currentFile (current, previous) {
+    currentFileId (val, prev) {
+      const current = this.openedFile(val)
+      const previous = this.openedFile(val)
+
       this.changeFile(current, previous)
     },
     currentContent () {

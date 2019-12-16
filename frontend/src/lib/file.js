@@ -23,6 +23,10 @@ const isSameFile = (a, b) => {
   return a && b && a.repo === b.repo && a.path === b.path
 }
 
+const isProtectFile = file => {
+  return file.repo.startsWith('__')
+}
+
 const dirname = path => {
   return path.substr(0, path.lastIndexOf('/'))
 }
@@ -39,7 +43,7 @@ const toUri = (file) => {
   if (file && file.repo && file.path) {
     return encodeURI(`yank-note://${file.repo}/${file.path.replace(/^\//, '')}`)
   } else {
-    return 'yank-note://system/blank.md'
+    return 'yank-note://__system__/blank.md'
   }
 }
 
@@ -157,6 +161,7 @@ const openInOS = async ({ repo, path }) => {
 export default {
   isBelongTo,
   isSameFile,
+  isProtectFile,
   isEncryptedFile,
   dirname,
   basename,

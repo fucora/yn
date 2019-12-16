@@ -26,8 +26,9 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 import env from '@/lib/env'
+import File from '@/lib/file'
 import 'vue-awesome/icons/thumbtack'
 
 const isElectron = env.isElectron
@@ -78,7 +79,7 @@ export default {
     this.win = null
   },
   computed: {
-    ...mapState('app', ['currentFile', 'savedAt', 'previousContent', 'currentContent']),
+    ...mapGetters('app', ['currentFile']),
     titleBarStyles () {
       if (isElectron && !this.isFocused) {
         return { background: '#818181' }
@@ -91,31 +92,28 @@ export default {
       return null
     },
     saved () {
-      return this.previousContent === this.currentContent
+      const { prevContent, content } = this.currentFile
+      return File.isProtectFile(this.currentFile) || prevContent === content
     },
     status () {
-      if (this.savedAt === null && this.currentFile) {
-        return '加载完毕'
-      } else if (this.savedAt) {
-        return '保存于：' + this.savedAt.toLocaleString()
+      const savedAt = this.currentFile.savedAt
+
+      if (savedAt) {
+        return '保存于：' + savedAt.toLocaleString()
       }
 
-      return ''
+      return '加载完毕'
     },
     statusText () {
       const file = this.currentFile
-      if (file) {
-        if (file.repo === '__help__') {
-          return file.title
-        }
+      if (file.title) {
+        return file.title
+      }
 
-        if (file.path && file.repo) {
-          return `${file.path}-${this.status} [${file.repo}]`
-        } else {
-          return file.name
-        }
+      if (file.path && file.repo) {
+        return `${file.path}-${this.status} [${file.repo}]`
       } else {
-        return '未打开文件'
+        return file.name
       }
     }
   },
@@ -123,7 +121,8 @@ export default {
     statusText: {
       immediate: true,
       handler (val) {
-        document.title = this.currentFile ? (this.currentFile.name || this.currentFile.title || 'Yank Note') : '未打开文件'
+        const { name, title } = this.currentFile
+        document.title = title || name || 'Yank Note'
       },
     },
     saved: {

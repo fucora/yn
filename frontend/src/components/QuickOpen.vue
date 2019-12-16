@@ -27,7 +27,7 @@
 
 <script>
 import _ from 'lodash'
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import file from '@/lib/file'
 import fuzzyMatch from '@/lib/fuzzyMatch'
 
@@ -232,7 +232,8 @@ export default {
     }
   },
   computed: {
-    ...mapState('app', ['currentRepo', 'recentOpenTime', 'tree', 'markedFiles']),
+    ...mapGetters('app', ['recentOpenTime']),
+    ...mapState('app', ['currentRepo', 'tree', 'markedFiles']),
     files () {
       return this.travelFiles(this.tree || [])
     },

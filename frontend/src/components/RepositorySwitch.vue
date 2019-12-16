@@ -36,7 +36,7 @@ export default {
     },
     choose (repo) {
       if (repo.name !== this.currentRepo.name) {
-        this.$store.commit('app/setCurrentRepo', repo)
+        this.$store.dispatch('app/switchCurrentRepo', repo)
       }
     },
   },
@@ -46,7 +46,7 @@ export default {
       if (!this.currentRepo || keys.indexOf(this.currentRepo.name) < 0) {
         if (keys.length > 0) {
           const name = keys[0]
-          this.$store.commit('app/setCurrentRepo', { name, path: val[name] })
+          this.$store.dispatch('app/switchCurrentRepo', { name, path: val[name] })
         }
       }
     }

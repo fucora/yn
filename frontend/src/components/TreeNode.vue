@@ -41,7 +41,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import File from '@/lib/file'
 import Extensions from '@/lib/extensions'
 import DrawioPlugin from '@/plugins/DrawioPlugin'
@@ -138,7 +138,7 @@ export default {
     select (item) {
       if (item.type !== 'dir') {
         if (Extensions.supported(item.name)) {
-          this.$store.commit('app/setCurrentFile', item)
+          this.$store.dispatch('app/switchCurrentFile', item)
         } else {
           if (item.path.toLowerCase().endsWith('.drawio')) {
             DrawioPlugin.open(item)
@@ -236,10 +236,10 @@ export default {
       // 重命名当前文件或父目录后，切换到新位置
       if (this.currentFile && (File.isSameFile(this.item, this.currentFile) || (this.item.type === 'dir' && File.isBelongTo(this.item.path, this.currentFile.path)))) {
         if (newFile.type === 'file') {
-          this.$store.commit('app/setCurrentFile', newFile)
+          this.$store.dispatch('app/switchCurrentFile', newFile)
         } else {
           // TODO 切换到新位置
-          this.$store.commit('app/setCurrentFile', null)
+          this.$store.dispatch('app/switchCurrentFile', null)
         }
       }
 
@@ -258,7 +258,7 @@ export default {
 
         // 删除当前文件或父目录后，关闭当前文件
         if (this.currentFile && (File.isSameFile(this.item, this.currentFile) || (this.item.type === 'dir' && File.isBelongTo(this.item.path, this.currentFile.path)))) {
-          this.$store.commit('app/setCurrentFile', null)
+          this.$store.dispatch('app/switchCurrentFile', null)
         }
 
         this.$bus.emit('file-deleted', this.item)
@@ -269,7 +269,8 @@ export default {
     currentRepoName () {
       return this.currentRepo ? this.currentRepo.name : '/'
     },
-    ...mapState('app', ['currentFile', 'currentRepo']),
+    ...mapGetters('app', ['currentFile']),
+    ...mapState('app', ['currentRepo']),
     selected () {
       if (!this.currentFile) {
         return false
@@ -279,7 +280,7 @@ export default {
         return this.currentFile.repo === this.item.repo && this.currentFile.path.startsWith(this.item.path + '/')
       }
 
-      return this.currentFile.repo === this.item.repo && this.currentFile.path === this.item.path
+      return File.isSameFile(this.currentFile, this.item)
     },
     shouldOpen () {
       return this.item.type === 'dir' && this.currentFile && this.currentFile.path.startsWith(this.item.path + '/') && this.currentFile.repo === this.item.repo

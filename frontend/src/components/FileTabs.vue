@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import Tabs from './Tabs'
 import File from '@/lib/file'
 
@@ -41,11 +41,12 @@ export default {
       this.current = item.key
     },
     switchFile (file) {
-      this.$store.commit('app/setCurrentFile', file)
+      this.$store.dispatch('app/switchCurrentFile', file)
     }
   },
   computed: {
-    ...mapState('app', ['currentFile', 'tabs'])
+    ...mapState('app', ['tabs']),
+    ...mapGetters('app', ['currentFile'])
   },
   watch: {
     currentFile: {
@@ -54,8 +55,8 @@ export default {
         const uri = File.toUri(file)
         const item = {
           key: uri,
-          label: file ? file.name : '空白页',
-          description: file ? file.path : '空白页',
+          label: file.name,
+          description: file.path,
           payload: { file },
         }
 

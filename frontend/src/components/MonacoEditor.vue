@@ -33,26 +33,31 @@ export default {
     window.removeEventListener('keyup', this.recordKeys)
   },
   methods: {
-    getModel (uri, value) {
+    setModel (uri, value) {
+      const model = this.getModel(uri, value)
+      this.editor.setModel(model)
+      this.$emit('change-document', this.getDucumentInfo())
+    },
+    getModel (uri, value = null) {
       let model = models[uri]
 
       if (!model) {
         model = window.monaco.editor.createModel(value, undefined, window.monaco.Uri.parse(uri))
         model.onDidChangeContent(e => {
-          let value = model.getValue()
+          let val = model.getValue()
           const eol = model.getEOL()
-          if (!value.endsWith(eol)) {
-            value += eol
-            model.setValue(value)
+          if (!val.endsWith(eol)) {
+            val += eol
+            model.setValue(val)
           }
-          this.$emit('change', { uri, value })
+          this.$emit('change', { uri, value: val })
         })
       }
 
-      // TODO 不用 set value 保留编辑状态
-      model.setValue(value)
+      if (value !== null && model.getValue() !== value) {
+        model.setValue(value)
+      }
 
-      // TODO 缓存 model
       models[uri] = model
 
       return model
@@ -260,10 +265,6 @@ export default {
     },
     getValue () {
       return this.editor.getModel().getValue(window.monaco.editor.DefaultEndOfLine.LF)
-    },
-    setModel (uri, value) {
-      const model = this.getModel(uri, value || '')
-      this.editor.setModel(model)
     },
     replaceValue (oldValue, newValue) {
       this.editor.getModel().setValue(this.getValue().replace(oldValue, newValue))

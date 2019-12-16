@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 import XMask from './Mask'
 import QuickOpen from './QuickOpen'
 
@@ -38,7 +38,7 @@ export default {
       } else if (e.key === 'p' && e.ctrlKey) {
         this.show = f => {
           this.$bus.$emit('switch-repo-by-name', f.repo)
-          this.$store.commit('app/setCurrentFile', f)
+          this.$store.dispatch('app/switchCurrentFile', f)
           this.show = false
         }
         e.preventDefault()
@@ -47,7 +47,7 @@ export default {
     },
   },
   computed: {
-    ...mapState('app', ['currentFile'])
+    ...mapGetters('app', ['currentFile'])
   }
 }
 </script>

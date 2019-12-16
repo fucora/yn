@@ -38,7 +38,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 import _ from 'lodash'
 import mime from 'mime-types'
 import Markdown from 'markdown-it'
@@ -375,15 +375,18 @@ export default {
     }
   },
   computed: {
-    ...mapState('app', ['currentContent', 'currentFile']),
+    ...mapGetters('app', ['currentFile']),
+    currentContent () {
+      return this.currentFile.content || ''
+    },
     fileRepo () {
-      return this.currentFile && this.currentFile.repo
+      return this.currentFile.repo
     },
     fileName () {
-      return this.currentFile && this.currentFile.name
+      return this.currentFile.name
     },
     filePath () {
-      return this.currentFile && this.currentFile.path
+      return this.currentFile.path
     },
   },
   watch: {
